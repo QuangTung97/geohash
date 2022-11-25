@@ -91,3 +91,19 @@ func TestComputeGeohash_Case2(t *testing.T) {
 	}, 7).String()
 	assert.Equal(t, "kq0g71w", result)
 }
+
+func TestComputeGeohash_Case3(t *testing.T) {
+	result := ComputeGeohash(Pos{
+		Lat: 28.3218,
+		Lon: -62.0434,
+	}, 7).String()
+	assert.Equal(t, "dt5ch5v", result)
+}
+
+func TestComputeGeohash_Case4(t *testing.T) {
+	result := ComputeGeohash(Pos{
+		Lat: -17.3218,
+		Lon: -45.0434,
+	}, 7).String()
+	assert.Equal(t, "6uzvrn8", result)
+}
