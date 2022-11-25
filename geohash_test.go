@@ -1,8 +1,11 @@
 package geohash
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestSpacing(t *testing.T) {
@@ -302,7 +305,7 @@ func TestNearbyNext__Radius_2(t *testing.T) {
 	}, offsets)
 }
 
-func TestNearbyGeohashs(t *testing.T) {
+func TestNearbyGeohashList(t *testing.T) {
 	h := ComputeGeohash(Pos{
 		Lat: 0.7,
 		Lon: 0.7,
@@ -317,10 +320,10 @@ func TestNearbyGeohashs(t *testing.T) {
 	rec := h.Rec()
 	assert.Equal(t, 110.56042392519969, haversineDistance(origin, rec.TopLeft))
 
-	hashList := NearbyGeohashs(origin, 20, 3)
+	hashList := NearbyGeohashList(origin, 20, 3)
 	assert.Equal(t, []Hash{h}, hashList)
 
-	hashList = NearbyGeohashs(Pos{
+	hashList = NearbyGeohashList(Pos{
 		Lat: 0.7,
 		Lon: 0.7,
 	}, 120, 3)
@@ -332,7 +335,7 @@ func TestNearbyGeohashs(t *testing.T) {
 		h.Bottom(), h.Bottom().Right(),
 	}, hashList)
 
-	hashList = NearbyGeohashs(Pos{
+	hashList = NearbyGeohashList(Pos{
 		Lat: 0.7,
 		Lon: 0.7,
 	}, 80, 3)
@@ -575,4 +578,82 @@ func TestNearestRightEdge(t *testing.T) {
 			Lon: 10,
 		}, h.Rec()))
 	})
+}
+
+func mathRand(a, b float64) float64 {
+	return a + (b-a)*rand.Float64()
+}
+
+func randInt(a, b int) int {
+	return rand.Intn(b-a+1) + a
+}
+
+func hashListToStrings(hashes []Hash) map[string]struct{} {
+	result := map[string]struct{}{}
+	for _, h := range hashes {
+		result[h.String()] = struct{}{}
+	}
+	return result
+}
+
+func TestNearbyGeohashList_Properties_Based_Testing(t *testing.T) {
+	seed := time.Now().Unix()
+	fmt.Println("SEED:", seed)
+	rand.Seed(1669380219)
+
+	lat := mathRand(-50, 50)
+	lon := mathRand(-100, 100)
+	origin := Pos{
+		Lat: lat,
+		Lon: lon,
+	}
+
+	radius := mathRand(5, 50)
+
+	prec := uint32(randInt(3, 4))
+	fmt.Println(origin, radius, prec)
+
+	start := time.Now()
+	hashes := NearbyGeohashList(origin, radius, prec)
+	fmt.Println(hashes, time.Since(start))
+
+	expectedHashes := map[string]struct{}{}
+	const epsilon = 0.002
+	count := 0
+	totalDuration := time.Duration(0)
+
+	const lonDelta = 5
+	const latDelta = 5
+
+	for y := lat - latDelta; y <= lat+latDelta; y += epsilon {
+		for x := lon - lonDelta; x <= lon+lonDelta; x += epsilon {
+			p := Pos{
+				Lat: y,
+				Lon: x,
+			}
+
+			count++
+
+			start := time.Now()
+			d := haversineDistance(origin, p)
+			totalDuration += time.Now().Sub(start)
+
+			if d <= radius {
+				h := ComputeGeohash(p, prec)
+				expectedHashes[h.String()] = struct{}{}
+			}
+		}
+	}
+
+	fmt.Println(count, float64(totalDuration.Microseconds())/float64(count))
+	assert.Equal(t, expectedHashes, hashListToStrings(hashes))
+}
+
+func BenchmarkNearbyGeohashList(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		_ = NearbyGeohashList(Pos{
+			Lat: -19.564545523884412,
+			Lon: -97.17259695978485,
+		}, 10, 5)
+	}
 }

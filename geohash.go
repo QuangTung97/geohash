@@ -189,16 +189,32 @@ func haversineDistance(a, b Pos) float64 {
 func minDistanceToGeohash(origin Pos, hash Hash) float64 {
 	rec := hash.Rec()
 
-	minDistance := haversineDistance(origin, nearestLeftEdge(origin, rec))
+	if origin.Lon < rec.TopLeft.Lon {
+		return haversineDistance(origin, nearestLeftEdge(origin, rec))
+	}
 
-	d := haversineDistance(origin, nearestRightEdge(origin, rec))
+	if origin.Lon > rec.TopRight.Lon {
+		return haversineDistance(origin, nearestRightEdge(origin, rec))
+	}
+
+	minDistance := math.MaxFloat64
+	var d float64
+
+	d = haversineDistance(origin, nearestLeftEdge(origin, rec))
 	minDistance = math.Min(minDistance, d)
 
-	d = haversineDistance(origin, nearestTopEdge(origin, rec))
+	d = haversineDistance(origin, nearestRightEdge(origin, rec))
 	minDistance = math.Min(minDistance, d)
 
-	d = haversineDistance(origin, nearestBottomEdge(origin, rec))
-	minDistance = math.Min(minDistance, d)
+	if origin.Lat >= rec.BottomRight.Lat {
+		d = haversineDistance(origin, nearestTopEdge(origin, rec))
+		minDistance = math.Min(minDistance, d)
+	}
+
+	if origin.Lat <= rec.TopRight.Lat {
+		d = haversineDistance(origin, nearestBottomEdge(origin, rec))
+		minDistance = math.Min(minDistance, d)
+	}
 
 	return minDistance
 }
@@ -217,8 +233,8 @@ func (h Hash) addOffset(offset posOffset) Hash {
 	return h
 }
 
-// NearbyGeohashs computes nearby geohashs, radius is in km
-func NearbyGeohashs(origin Pos, radius float64, precision uint32) []Hash {
+// NearbyGeohashList computes nearby geohashes, radius is in km
+func NearbyGeohashList(origin Pos, radius float64, precision uint32) []Hash {
 	h := ComputeGeohash(origin, precision)
 
 	result := []Hash{h}
