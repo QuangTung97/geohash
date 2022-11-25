@@ -599,7 +599,7 @@ func hashListToStrings(hashes []Hash) map[string]struct{} {
 func TestNearbyGeohashList_Properties_Based_Testing(t *testing.T) {
 	seed := time.Now().Unix()
 	fmt.Println("SEED:", seed)
-	rand.Seed(1669380219)
+	rand.Seed(1669380237)
 
 	lat := mathRand(-50, 50)
 	lon := mathRand(-100, 100)
@@ -608,9 +608,9 @@ func TestNearbyGeohashList_Properties_Based_Testing(t *testing.T) {
 		Lon: lon,
 	}
 
-	radius := mathRand(5, 50)
+	radius := mathRand(5, 30)
 
-	prec := uint32(randInt(3, 4))
+	prec := uint32(randInt(5, 5))
 	fmt.Println(origin, radius, prec)
 
 	start := time.Now()
@@ -618,12 +618,12 @@ func TestNearbyGeohashList_Properties_Based_Testing(t *testing.T) {
 	fmt.Println(hashes, time.Since(start))
 
 	expectedHashes := map[string]struct{}{}
-	const epsilon = 0.002
+	const epsilon = 0.0005
 	count := 0
 	totalDuration := time.Duration(0)
 
-	const lonDelta = 5
-	const latDelta = 5
+	const lonDelta = 2
+	const latDelta = 2
 
 	for y := lat - latDelta; y <= lat+latDelta; y += epsilon {
 		for x := lon - lonDelta; x <= lon+lonDelta; x += epsilon {
