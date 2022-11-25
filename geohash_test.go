@@ -107,3 +107,72 @@ func TestComputeGeohash_Case4(t *testing.T) {
 	}, 7).String()
 	assert.Equal(t, "6uzvrn8", result)
 }
+
+func TestGeohash_Left_And_Right(t *testing.T) {
+	h := ComputeGeohash(Pos{
+		Lat: -17.3218,
+		Lon: -45.0434,
+	}, 5)
+	assert.Equal(t, "6uzvr", h.String())
+
+	assert.Equal(t, "6uzvq", h.Left().String())
+	assert.Equal(t, "7hbj2", h.Right().String())
+
+	h = ComputeGeohash(Pos{
+		Lat: -17.3218,
+		Lon: -45.0200,
+	}, 5)
+	assert.Equal(t, "6uzvr", h.String())
+
+	h = ComputeGeohash(Pos{
+		Lat: -89.97802734,
+		Lon: -179.97802734,
+	}, 5)
+	assert.Equal(t, "00000", h.String())
+	assert.Equal(t, "pbpbp", h.Left().String())
+	assert.Equal(t, "00001", h.Right().String())
+}
+
+func TestGeohash_Left_And_Right_Case_2(t *testing.T) {
+	h := ComputeGeohash(Pos{
+		Lat: 89.97802734,
+		Lon: 179.97802734,
+	}, 5)
+	assert.Equal(t, "zzzzz", h.String())
+	assert.Equal(t, "zzzzy", h.Left().String())
+	assert.Equal(t, "bpbpb", h.Right().String())
+}
+
+func TestGeohash_Top_And_Bot(t *testing.T) {
+	h := ComputeGeohash(Pos{
+		Lat: -17.3218,
+		Lon: -45.0434,
+	}, 5)
+	assert.Equal(t, "6uzvr", h.String())
+
+	assert.Equal(t, "6uzvx", h.Top().String())
+	assert.Equal(t, "6uzvp", h.Bottom().String())
+
+	h = ComputeGeohash(Pos{
+		Lat: -17.3218,
+		Lon: -45.0200,
+	}, 5)
+	assert.Equal(t, "6uzvr", h.String())
+
+	h = ComputeGeohash(Pos{
+		Lat: -89.97802734,
+		Lon: -179.97802734,
+	}, 5)
+	assert.Equal(t, "00002", h.Top().String())
+	assert.Equal(t, "bpbpb", h.Bottom().String())
+}
+
+func TestGeohash_Top_And_Bottom_Case_2(t *testing.T) {
+	h := ComputeGeohash(Pos{
+		Lat: 89.97802734,
+		Lon: 179.97802734,
+	}, 5)
+	assert.Equal(t, "zzzzz", h.String())
+	assert.Equal(t, "pbpbp", h.Top().String())
+	assert.Equal(t, "zzzzx", h.Bottom().String())
+}

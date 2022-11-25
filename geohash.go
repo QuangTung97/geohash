@@ -71,6 +71,56 @@ func (h Hash) String() string {
 	return string(stringBytes)
 }
 
+func (h Hash) Left() Hash {
+	bitCount := h.precision * 5
+	latPrecision := bitCount >> 1
+	lonPrecision := bitCount - latPrecision
+
+	mask := uint32((1 << lonPrecision) - 1)
+
+	result := h
+	result.lon = (result.lon + mask) & mask
+
+	return result
+}
+
+func (h Hash) Right() Hash {
+	bitCount := h.precision * 5
+	latPrecision := bitCount >> 1
+	lonPrecision := bitCount - latPrecision
+
+	mask := uint32((1 << lonPrecision) - 1)
+
+	result := h
+	result.lon = (result.lon + 1) & mask
+
+	return result
+}
+
+func (h Hash) Top() Hash {
+	bitCount := h.precision * 5
+	latPrecision := bitCount >> 1
+
+	mask := uint32((1 << latPrecision) - 1)
+
+	result := h
+	result.lat = (result.lat + 1) & mask
+
+	return result
+}
+
+func (h Hash) Bottom() Hash {
+	bitCount := h.precision * 5
+	latPrecision := bitCount >> 1
+
+	mask := uint32((1 << latPrecision) - 1)
+
+	result := h
+	result.lat = (result.lat + mask) & mask
+
+	return result
+}
+
 var encoding = []byte{
 	'0', '1', '2', '3',
 	'4', '5', '6', '7',
@@ -104,4 +154,9 @@ func ComputeGeohash(pos Pos, precision uint32) Hash {
 		lat:       lat,
 		lon:       lon,
 	}
+}
+
+// NearbyGeohashs computes nearby geohashs
+func NearbyGeohashs(pos Pos, radius float64) []Hash {
+	return nil
 }
