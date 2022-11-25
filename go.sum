@@ -1,3 +1,5 @@
+github.com/QuangTung97/haversine v0.0.0-20221125042253-25243eb4abc4 h1:97Rg8AMI5kSw1Rcnkttq7PpRV+MZH5n4in/PsDrFhZY=
+github.com/QuangTung97/haversine v0.0.0-20221125042253-25243eb4abc4/go.mod h1:YeDVCiipln9nk2fnHY0Jsp/PBl75Ol9hjoM9zPuilZE=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

@@ -176,3 +176,403 @@ func TestGeohash_Top_And_Bottom_Case_2(t *testing.T) {
 	assert.Equal(t, "pbpbp", h.Top().String())
 	assert.Equal(t, "zzzzx", h.Bottom().String())
 }
+
+func TestGeohash_Rec(t *testing.T) {
+	h := ComputeGeohash(Pos{
+		Lat: 0,
+		Lon: 0,
+	}, 5)
+	assert.Equal(t, "s0000", h.String())
+	assert.Equal(t, Rectangle{
+		BottomLeft: Pos{
+			Lat: 0,
+			Lon: 0,
+		},
+		BottomRight: Pos{
+			Lat: 0,
+			Lon: 0.0439453125,
+		},
+		TopLeft: Pos{
+			Lat: 0.0439453125,
+			Lon: 0,
+		},
+		TopRight: Pos{
+			Lat: 0.0439453125,
+			Lon: 0.0439453125,
+		},
+	}, h.Rec())
+}
+
+func TestNearbyNext(t *testing.T) {
+	offset := posOffset{
+		lat: 0,
+		lon: 1,
+	}
+	var ok bool
+
+	offset, ok = nearbyNext(offset, 1)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, posOffset{
+		lat: 1,
+		lon: 1,
+	}, offset)
+
+	offset, ok = nearbyNext(offset, 1)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, posOffset{
+		lat: 1,
+		lon: 0,
+	}, offset)
+
+	offset, ok = nearbyNext(offset, 1)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, posOffset{
+		lat: 1,
+		lon: -1,
+	}, offset)
+
+	offset, ok = nearbyNext(offset, 1)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, posOffset{
+		lat: 0,
+		lon: -1,
+	}, offset)
+
+	offset, ok = nearbyNext(offset, 1)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, posOffset{
+		lat: -1,
+		lon: -1,
+	}, offset)
+
+	offset, ok = nearbyNext(offset, 1)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, posOffset{
+		lat: -1,
+		lon: 0,
+	}, offset)
+
+	offset, ok = nearbyNext(offset, 1)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, posOffset{
+		lat: -1,
+		lon: 1,
+	}, offset)
+
+	offset, ok = nearbyNext(offset, 1)
+	assert.Equal(t, false, ok)
+	assert.Equal(t, posOffset{}, offset)
+}
+
+func TestNearbyNext__Radius_2(t *testing.T) {
+	var offsets []posOffset
+
+	offset := posOffset{
+		lat: 0,
+		lon: 2,
+	}
+	offsets = append(offsets, offset)
+
+	for {
+		var ok bool
+		offset, ok = nearbyNext(offset, 2)
+		if !ok {
+			break
+		}
+		offsets = append(offsets, offset)
+	}
+
+	assert.Equal(t, []posOffset{
+		{lat: 0, lon: 2},
+		{lat: 1, lon: 2},
+		{lat: 2, lon: 2},
+		{lat: 2, lon: 1},
+		{lat: 2, lon: 0},
+		{lat: 2, lon: -1},
+		{lat: 2, lon: -2},
+		{lat: 1, lon: -2},
+		{lat: 0, lon: -2},
+		{lat: -1, lon: -2},
+		{lat: -2, lon: -2},
+		{lat: -2, lon: -1},
+		{lat: -2, lon: 0},
+		{lat: -2, lon: 1},
+		{lat: -2, lon: 2},
+		{lat: -1, lon: 2},
+	}, offsets)
+}
+
+func TestNearbyGeohashs(t *testing.T) {
+	h := ComputeGeohash(Pos{
+		Lat: 0.7,
+		Lon: 0.7,
+	}, 3)
+	assert.Equal(t, "s00", h.String())
+
+	origin := Pos{
+		Lat: 0.7,
+		Lon: 0.7,
+	}
+
+	rec := h.Rec()
+	assert.Equal(t, 110.56042392519969, haversineDistance(origin, rec.TopLeft))
+
+	hashList := NearbyGeohashs(origin, 20, 3)
+	assert.Equal(t, []Hash{h}, hashList)
+
+	hashList = NearbyGeohashs(Pos{
+		Lat: 0.7,
+		Lon: 0.7,
+	}, 120, 3)
+	assert.Equal(t, []Hash{
+		h,
+		h.Right(), h.Right().Top(),
+		h.Top(), h.Top().Left(),
+		h.Left(), h.Bottom().Left(),
+		h.Bottom(), h.Bottom().Right(),
+	}, hashList)
+
+	hashList = NearbyGeohashs(Pos{
+		Lat: 0.7,
+		Lon: 0.7,
+	}, 80, 3)
+	assert.Equal(t, []Hash{
+		h,
+		h.Right(),
+		h.Top(),
+		h.Left(),
+		h.Bottom(),
+	}, hashList)
+}
+
+func TestNearestTopEdge(t *testing.T) {
+	h := ComputeGeohash(Pos{
+		Lat: 0.7,
+		Lon: 0.7,
+	}, 3)
+	assert.Equal(t, "s00", h.String())
+
+	const size = 1.40625
+
+	assert.Equal(t, Rectangle{
+		TopRight: Pos{
+			Lat: size,
+			Lon: size,
+		},
+		TopLeft: Pos{
+			Lat: size,
+			Lon: 0,
+		},
+		BottomRight: Pos{
+			Lat: 0,
+			Lon: size,
+		},
+	}, h.Rec())
+
+	t.Run("inside-range", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size,
+			Lon: 0.3,
+		}, nearestTopEdge(Pos{
+			Lat: 10,
+			Lon: 0.3,
+		}, h.Rec()))
+	})
+
+	t.Run("outside-left", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size,
+			Lon: 0,
+		}, nearestTopEdge(Pos{
+			Lat: 10,
+			Lon: -0.3,
+		}, h.Rec()))
+	})
+
+	t.Run("outside-right", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size,
+			Lon: size,
+		}, nearestTopEdge(Pos{
+			Lat: 10,
+			Lon: size + 3.0,
+		}, h.Rec()))
+	})
+}
+
+func TestNearestBottomEdge(t *testing.T) {
+	const size = 1.40625
+
+	h := ComputeGeohash(Pos{
+		Lat: size + 1,
+		Lon: size + 1,
+	}, 3)
+	assert.Equal(t, "s03", h.String())
+
+	assert.Equal(t, Rectangle{
+		BottomLeft: Pos{
+			Lat: size,
+			Lon: size,
+		},
+		TopRight: Pos{
+			Lat: size + size,
+			Lon: size + size,
+		},
+		TopLeft: Pos{
+			Lat: size + size,
+			Lon: size,
+		},
+		BottomRight: Pos{
+			Lat: size,
+			Lon: size + size,
+		},
+	}, h.Rec())
+
+	t.Run("inside-range", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size,
+			Lon: size + 0.3,
+		}, nearestBottomEdge(Pos{
+			Lat: 10,
+			Lon: size + 0.3,
+		}, h.Rec()))
+	})
+
+	t.Run("outside-left", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size,
+			Lon: size,
+		}, nearestBottomEdge(Pos{
+			Lat: 10,
+			Lon: size - 0.3,
+		}, h.Rec()))
+	})
+
+	t.Run("outside-right", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size,
+			Lon: size + size,
+		}, nearestBottomEdge(Pos{
+			Lat: 10,
+			Lon: size + size + 3.0,
+		}, h.Rec()))
+	})
+}
+
+func TestNearestLeftEdge(t *testing.T) {
+	const size = 1.40625
+
+	h := ComputeGeohash(Pos{
+		Lat: size + 1,
+		Lon: size + 1,
+	}, 3)
+	assert.Equal(t, "s03", h.String())
+
+	assert.Equal(t, Rectangle{
+		BottomLeft: Pos{
+			Lat: size,
+			Lon: size,
+		},
+		TopRight: Pos{
+			Lat: size + size,
+			Lon: size + size,
+		},
+		TopLeft: Pos{
+			Lat: size + size,
+			Lon: size,
+		},
+		BottomRight: Pos{
+			Lat: size,
+			Lon: size + size,
+		},
+	}, h.Rec())
+
+	t.Run("inside-range", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: 1.7256124742605874,
+			Lon: size,
+		}, nearestLeftEdge(Pos{
+			Lat: size + 0.3,
+			Lon: 10,
+		}, h.Rec()))
+	})
+
+	t.Run("outside-bottom", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size,
+			Lon: size,
+		}, nearestLeftEdge(Pos{
+			Lat: size - 0.3,
+			Lon: 10,
+		}, h.Rec()))
+	})
+
+	t.Run("outside-right", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size + size,
+			Lon: size,
+		}, nearestLeftEdge(Pos{
+			Lat: size + size + 3.0,
+			Lon: 10,
+		}, h.Rec()))
+	})
+}
+
+func TestNearestRightEdge(t *testing.T) {
+	const size = 1.40625
+
+	h := ComputeGeohash(Pos{
+		Lat: size + 1,
+		Lon: size + 1,
+	}, 3)
+	assert.Equal(t, "s03", h.String())
+
+	assert.Equal(t, Rectangle{
+		BottomLeft: Pos{
+			Lat: size,
+			Lon: size,
+		},
+		TopRight: Pos{
+			Lat: size + size,
+			Lon: size + size,
+		},
+		TopLeft: Pos{
+			Lat: size + size,
+			Lon: size,
+		},
+		BottomRight: Pos{
+			Lat: size,
+			Lon: size + size,
+		},
+	}, h.Rec())
+
+	t.Run("inside-range", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: 1.7197557847302827,
+			Lon: size + size,
+		}, nearestRightEdge(Pos{
+			Lat: size + 0.3,
+			Lon: 10,
+		}, h.Rec()))
+	})
+
+	t.Run("outside-bottom", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size,
+			Lon: size + size,
+		}, nearestRightEdge(Pos{
+			Lat: size - 0.3,
+			Lon: 10,
+		}, h.Rec()))
+	})
+
+	t.Run("outside-right", func(t *testing.T) {
+		assert.Equal(t, Pos{
+			Lat: size + size,
+			Lon: size + size,
+		}, nearestRightEdge(Pos{
+			Lat: size + size + 3.0,
+			Lon: 10,
+		}, h.Rec()))
+	})
+}
